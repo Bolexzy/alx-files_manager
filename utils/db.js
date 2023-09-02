@@ -1,21 +1,27 @@
-import mongodb from 'mongodb';
+import { MongoClient, ObjectId } from 'mongodb';
+import { env } from 'process';
 
 class DBClient {
-  constructor() {
-    const host = process.env.DB_HOST || 'localhost';
-    const port = process.env.DB_PORT || 27017;
+  constructor(host = '127.0.0.1', port = 27017, database = 'files_manager') {
+    this.host = host;
+    this.port = port;
+    this.database = database;
+    this.url = `mongodb://${this.host}:${this.port}`;
+    this.isConnected = false;
+    this.ObjectId = ObjectId;
 
-    const DB = process.env.DB_DATABASE || 'files_manager';
-    const DB_URL = `mongodb://${host}:${port}/${DB}`;
-
-    this.client = new mongodb.MongoClient(DB_URL, { useUnifiedTopology: true });
-    this.client.isConnected = true;
+    this.client = new MongoClient(this.url);
     this.client.connect()
       .then(() => {
-        this.client.isConnected = true;
+        this.isConnected = true;
+        this.db = this.client.db(this.database);
 
         this.client.on('close', () => {
-          this.client.isConnected = false;
+          this.isConnected = false;
+        });
+
+        this.client.on('reconnect', () => {
+          this.isConnected = true;
         });
       })
       .catch((err) => {
@@ -24,12 +30,12 @@ class DBClient {
   }
 
   isAlive() {
-    return this.client.isConnected;
+    return this.isConnected;
   }
 
   async nbUsers() {
     try {
-      return await this.client.db().collection('users').countDocuments();
+      return await this.db.collection('users').countDocuments();
     } catch (err) {
       console.log(err);
     }
@@ -38,7 +44,7 @@ class DBClient {
 
   async nbFiles() {
     try {
-      return await this.client.db().collection('files').countDocuments();
+      return await this.db.collection('files').countDocuments();
     } catch (err) {
       console.log(err);
     }
@@ -46,5 +52,4 @@ class DBClient {
   }
 }
 
-export const dbClient = new DBClient();
-export default DBClient;
+export default new DBClient(env.DB_HOST, env.DB_PORT, env.DB_DATABASE);
