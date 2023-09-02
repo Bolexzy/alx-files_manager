@@ -1,5 +1,6 @@
-const redis = require('redis');
 import { promisify } from 'util';
+
+const redis = require('redis');
 
 class RedisClient {
   constructor() {
@@ -11,7 +12,6 @@ class RedisClient {
       console.error('Redis client failed to connect:', err);
       this.isClientConnected = false;
     });
-
   }
 
   isAlive() {
